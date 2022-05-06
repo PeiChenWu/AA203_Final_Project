@@ -1,6 +1,66 @@
 import pickle
 import os
+import sympy as sp
+
+
+def dynamics_eq():
+    g = sp.symbols('g')
+
+    # Pendulum
+    L = sp.symbols('L')
+    mp = sp.symbols(r'm_p')
+    Ip = sp.symbols(r'I_p')
+
+    # Drone
+    mQ = sp.symbols(r'm_Q')
+    IQ = sp.symbols(r'I_Q')
+    l = sp.symbols('l')
+
+    T1 = sp.symbols(r'T_1')
+    T2 = sp.symbols(r'T_2')
+
+    Rx = sp.symbols(r'R_x')
+    Ry = sp.symbols(r'R_y')
+
+    # Drone angle
+    θ = sp.symbols(r'\theta')
+    dθ = sp.symbols(r'\dot{\theta}')
+    ddθ = sp.symbols(r'\ddot{\theta}')
+
+    # Pendulum angle
+    ϕ = sp.symbols(r'\phi')
+    dϕ = sp.symbols(r'\dot{\phi}')
+    ddϕ = sp.symbols(r'\ddot{\phi}')
+
+    # drone x
+    x = sp.symbols(r'x')
+    dx = sp.symbols(r'\dot{x}')
+    ddx = sp.symbols(r'\ddot{x}')
+
+    # drone y
+    y = sp.symbols(r'y')
+    dy = sp.symbols(r'\dot{y}')
+    ddy = sp.symbols(r'\ddot{y}')
     
+    ddx_p = ddx - L*ddϕ*sp.sin(ϕ-sp.pi/2)-dϕ**2*L*sp.cos(ϕ-sp.pi/2)
+    ddy_p = ddy + L*ddϕ*sp.cos(ϕ-sp.pi/2)-dϕ**2*L*sp.sin(ϕ-sp.pi/2)
+    
+    eq1 = Rx*sp.cos(θ)-Ry*sp.sin(θ)-mp*ddx_p
+    eq2 = Rx*sp.sin(θ)+Ry*sp.cos(θ)-mp*g-mp*ddy_p
+    eq3 = Rx*sp.sin(ϕ-sp.pi/2-θ)*L/2 - Ry*sp.cos(ϕ-sp.pi/2-θ)*L/2-mp*g*(L/2)*sp.cos(ϕ-sp.pi/2)-Ip*ddϕ
+    eq4 = -Rx*sp.cos(θ)+Ry*sp.sin(θ)-T1*sp.sin(θ)-T2*sp.sin(θ)-mQ*ddx
+    eq5 = -Rx*sp.sin(θ)-Ry*sp.cos(θ)+T1*sp.cos(θ)+T2*sp.cos(θ)-mQ*g-mQ*ddy
+    eq6 = T2*l-T1*l-IQ*ddθ
+    
+    sols = sp.solve([eq1,eq2,eq3,eq4,eq5,eq6], (Rx, Ry, ddx, ddy, ddθ, ddϕ), simplify=True)
+    
+    ddx_func = sp.lambdify((Ip, mp, L, ϕ, dϕ, IQ, mQ, l, θ, dθ, T1, T2, g), sols[ddx]) 
+    ddy_func = sp.lambdify((Ip, mp, L, ϕ, dϕ, IQ, mQ, l, θ, dθ, T1, T2, g), sols[ddy]) 
+    ddθ_func = sp.lambdify((Ip, mp, L, ϕ, dϕ, IQ, mQ, l, θ, dθ, T1, T2, g), sols[ddθ]) 
+    ddϕ_func = sp.lambdify((Ip, mp, L, ϕ, dϕ, IQ, mQ, l, θ, dθ, T1, T2, g), sols[ddϕ]) 
+    
+    return (ddx_func, ddy_func, ddθ_func, ddϕ_func)
+
 
 def get_folder_name(filename):
     return '/'.join(filename.split('/')[:-1])
@@ -160,7 +220,7 @@ def animate_planar_quad_with_inverted_pendulum(t, x, y, θ, ϕ, title_string=Non
                                   animate,
                                   t[::step].size,
                                   fargs=(t[::step], x[::step], y[::step], θ[::step], ϕ[::step]), 
-                                  interval=step * dt * 1000,
+                                  interval=step * dt * 1400,
                                   blit=True)
     if display_in_notebook:
         try:
