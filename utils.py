@@ -61,6 +61,46 @@ def dynamics_eq():
     
     return (ddx_func, ddy_func, ddθ_func, ddϕ_func)
 
+class Dynamics:
+    def __init__(self):
+        raise NotImplementedError
+        
+    def __call__(self, state, control):
+        raise NotImplementedError
+
+class PlanarQuadrotorDynamicsWithInvertedPendulum(Dynamics):
+
+    def __init__(self, g=9.807, mQ=2.5, l=1.0, IQ=1.0):
+        # Dynamics constants
+        # yapf: disable
+        self.g = g           # gravity (m / s**2)
+        self.mQ = mQ         # mass (kg)
+        self.l = l           # half-length (m)
+        self.IQ = IQ         # moment of inertia about the out-of-plane axis (kg * m**2)
+        # yapf: enable
+        
+        # Pendulum
+        self.mp = self.mQ*4
+        self.L = self.l*2
+        self.Ip = self.mp*(self.L/2)**2
+        
+        self.ddx_func, self.ddy_func, self.ddθ_func, self.ddϕ_func = dynamics_eq()
+        
+
+    def __call__(self, state, control):
+        """Continuous-time dynamics of a planar quadrotor expressed as an ODE."""
+        x, y, θ, ϕ, dx, dy, dθ, dϕ = state
+        T1, T2 = control
+        return np.array([
+            dx,
+            dy,
+            dθ,
+            dϕ,
+            self.ddx_func(self.Ip, self.mp, self.L, ϕ, dϕ, self.IQ, self.mQ, self.l, θ, dθ, T1, T2, self.g),
+            self.ddy_func(self.Ip, self.mp, self.L, ϕ, dϕ, self.IQ, self.mQ, self.l, θ, dθ, T1, T2, self.g),
+            self.ddθ_func(self.Ip, self.mp, self.L, ϕ, dϕ, self.IQ, self.mQ, self.l, θ, dθ, T1, T2, self.g),
+            self.ddϕ_func(self.Ip, self.mp, self.L, ϕ, dϕ, self.IQ, self.mQ, self.l, θ, dθ, T1, T2, self.g),
+        ])
 
 def get_folder_name(filename):
     return '/'.join(filename.split('/')[:-1])
