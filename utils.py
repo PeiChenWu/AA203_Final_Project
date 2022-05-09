@@ -294,7 +294,7 @@ def animate_planar_quad_with_inverted_pendulum(t, x, y, θ, ϕ, title_string=Non
                                   animate,
                                   t[::step].size,
                                   fargs=(t[::step], x[::step], y[::step], θ[::step], ϕ[::step]), 
-                                  interval=step * dt * 1400,
+                                  interval=step * dt * 1000,
                                   blit=True)
     if display_in_notebook:
         try:
