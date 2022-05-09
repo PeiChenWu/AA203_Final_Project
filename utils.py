@@ -303,5 +303,5 @@ def animate_planar_quad_with_inverted_pendulum(t, x, y, θ, ϕ, title_string=Non
             ani = HTML(ani.to_html5_video())
         except (NameError, ImportError):
             raise RuntimeError("`display_in_notebook = True` requires this code to be run in jupyter/colab.")
-    plt.close(fig)
-    return ani
+    #plt.close(fig)
+    return fig, ani
