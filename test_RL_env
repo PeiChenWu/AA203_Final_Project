@@ -37,3 +37,14 @@ print(env.observation_space.shape)
 print(env.action_space.shape)
 
 action = 0.55 * 9.81 / 2
+
+a = (action, action)
+
+frames = []
+obs = env.reset()
+
+for _ in range(50):
+    obs, r, done, _ = env.step(a)
+    # print(obs)
+    frames.append(env.render(mode = 'rgb_array'))
+display_frames_as_gif(frames)

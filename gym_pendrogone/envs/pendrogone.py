@@ -51,7 +51,7 @@ class Pendrogone(gym.Env):
         # self.l_mass = self.q_mass*4
         # self.cable_length = 0.82
         # self.cable_width = 0.01
-        # self.l_maxAngle = np.pi / 3
+        self.l_maxAngle = np.pi / 3
 
         self.Mass = self.mQ + self.mp
 
@@ -139,6 +139,7 @@ class Pendrogone(gym.Env):
             self.ddθ_func(self.Ip, self.mp, self.L, ϕ, dϕ, self.IQ, self.mQ, self.l, θ, dθ, T1, T2, self.g),
             self.ddϕ_func(self.Ip, self.mp, self.L, ϕ, dϕ, self.IQ, self.mQ, self.l, θ, dθ, T1, T2, self.g),
         ]
+        ds = np.array(ds)
         
         self.state = ds * self.dt + self.state
 
@@ -174,7 +175,7 @@ class Pendrogone(gym.Env):
         ])
         self.objective = np.array([0.0, 0.0])
 
-        # self.specific_reset()
+        self.specific_reset()
 
         return self.obs
 
@@ -257,7 +258,7 @@ class Pendrogone(gym.Env):
                                    -Pendrogone.LIMITS[1], Pendrogone.LIMITS[1])
 
             # Render quadrotor frame
-            ql,qr,qt,qb = -self.arm_length, self.arm_length, self.arm_width, -self.arm_width
+            ql,qr,qt,qb = -self.l, self.l, 0.2, -0.2
             self.frame_trans = rendering.Transform(rotation=phi, translation=(xq,zq))
             frame = rendering.FilledPolygon([(ql,qb), (ql,qt), (qr,qt), (qr,qb)])
             frame.set_color(0, .8, .8)
@@ -265,7 +266,7 @@ class Pendrogone(gym.Env):
             self.viewer.add_geom(frame)
 
             # Render load cable
-            ll,lr,lt,lb = -self.cable_width, self.cable_width, 0, -self.cable_length
+            ll,lr,lt,lb = -0.05, 0.05, 0, -self.L
             self.cable_trans = rendering.Transform(rotation=theta, translation=(xq,zq))
             cable = rendering.FilledPolygon([(ll,lb), (ll,lt), (lr,lt), (lr,lb)])
             cable.set_color(.1, .1, .1)
@@ -316,3 +317,62 @@ class Pendrogone(gym.Env):
 
     def close(self):
         if self.viewer: self.viewer.close()
+
+    def step(self, action):
+        # This first block of code should not change
+        old_potential = self.potential
+        
+        self._apply_action(action)
+        
+        potential = self.potential
+        
+        control_r = -0.07 * np.array(action).dot(np.array(action))
+        alive_r = float(self.alive_bonus())
+        pot_r = 50 * (potential - old_potential)
+
+        # -potential = distance to the objective
+        shape_r = Pendrogone.reward_shaping( -potential,
+                                                  np.linalg.norm(self.state[4:6]) )
+
+        reward = np.array([control_r, alive_r, pot_r, shape_r])
+        done = alive_r < 0
+
+        return self.obs, reward, done, {}
+
+    # @staticmethod
+    # def reward_shaping(dist, vel):
+    #     # print(dist, vel)
+    #     c = 5
+    #     dist_r = np.exp(- np.abs(3.5*dist)**2)
+    #     vel_r = np.power(np.exp(- np.abs(vel)), np.exp(- 2.5 * np.abs(dist)))
+    #     # vel_r = np.exp(- np.abs(vel))
+    #     # mask = (dist <= 0.2) * (vel > 1)
+    #     result = c * dist_r * vel_r
+
+    #     # return np.logical_not(mask) * result + mask * -3.0
+    #     return result
+
+    @staticmethod
+    def reward_shaping(dist, vel):
+        # print(dist, vel)
+        c = 5
+        dist_r = np.exp(- 2 * dist)
+
+        return c * dist_r
+    
+
+    @staticmethod
+    def normal_dist(mu, sigma_2):
+        c = 1/np.sqrt(2*np.pi*sigma_2)
+
+        return lambda x: c * np.exp(- (x-mu)**2 / (2*sigma_2))
+
+    @staticmethod
+    def exponential():
+        # return lambda d, v : max(3 - (3*d) ** 0.4, 0.0) * \
+        #     (4 - min(4, max(v, 0.001)))/4 ** (1/max(0.1, d))
+        # return lambda d : 3*max(1 - (d/4) ** 0.4, 0.0)
+        return lambda d : np.exp(- np.abs(d*2))
+
+    def specific_reset(self):
+        pass
