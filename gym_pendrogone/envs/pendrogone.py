@@ -222,9 +222,19 @@ class Pendrogone(gym.Env):
 
         return -200 if dead else +0.5
 
-    def pendulum_penalty(self):
+    def orientation_bonus(self):
+        """
+        Reward for upright drone (θ=0) and penalize for dθ != 0
+        """
+        _, _, θ, _, _, _, dθ, _ = self.state
+        return 10 * np.cos(θ) - 0.1 * dθ
+    
+    def pendulum_bonus(self):
+        """
+        Reward for upright pendulum (ϕ=pi) and penalize for dϕ != 0
+        """
         _, _, _, ϕ, _, _, _, dϕ = self.state
-        return -10 * np.linalg.norm([ϕ - np.pi, dϕ])
+        return 100 * (-np.cos(ϕ)) - 10 * dϕ
 
     @property
     def obs(self):
@@ -342,10 +352,10 @@ class Pendrogone(gym.Env):
         shape_r = Pendrogone.reward_shaping( -potential,
                                                   np.linalg.norm(self.state[4:6]) )
 
-        pendulum_r = self.pendulum_penalty()
+        ori_r = self.orientation_bonus()
+        pendulum_r = self.pendulum_bonus()
         
-        # reward = np.array([control_r, alive_r, pot_r, shape_r])
-        reward = control_r + alive_r + pot_r + shape_r + pendulum_r
+        reward = control_r + alive_r + pot_r + shape_r + ori_r + pendulum_r
         done = alive_r < 0
 
         return self.obs, reward, done, {}
@@ -366,10 +376,14 @@ class Pendrogone(gym.Env):
     @staticmethod
     def reward_shaping(dist, vel):
         # print(dist, vel)
-        c = 5
-        dist_r = np.exp(- 2 * dist)
+        # c = 5
+        # dist_r = np.exp(- 2 * dist)
+        # return c * dist_r
 
-        return c * dist_r
+        c1 = 10
+        c2 = 0.2
+        dist_r = -c1 * np.tanh(c2 * dist)
+        return dist_r
     
 
     @staticmethod
