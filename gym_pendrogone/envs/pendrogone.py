@@ -5,7 +5,8 @@ from gym import spaces
 from gym.utils import seeding
 
 class Pendrogone(gym.Env):
-    LIMITS = np.array([2.5, 2.5])
+    # LIMITS = np.array([2.5, 2.5])
+    LIMITS = np.array([15, 15])
     T = 0.02
 
     metadata = {
@@ -211,12 +212,19 @@ class Pendrogone(gym.Env):
         return - dist
 
     def alive_bonus(self):
-        dead = np.absolute(self.state[2]) > self.q_maxAngle \
-            or np.absolute(self.state[3]) > self.l_maxAngle \
-            or np.absolute(self.state[0]) > Pendrogone.LIMITS[0] \
+        # dead = np.absolute(self.state[2]) > self.q_maxAngle \
+        #     or np.absolute(self.state[3]) > self.l_maxAngle \
+        #     or np.absolute(self.state[0]) > Pendrogone.LIMITS[0] \
+        #     or np.absolute(self.state[1]) > Pendrogone.LIMITS[1]
+
+        dead = np.absolute(self.state[0]) > Pendrogone.LIMITS[0] \
             or np.absolute(self.state[1]) > Pendrogone.LIMITS[1]
 
         return -200 if dead else +0.5
+
+    def pendulum_penalty(self):
+        _, _, _, ϕ, _, _, _, dϕ = self.state
+        return -10 * np.linalg.norm([ϕ - np.pi, dϕ])
 
     @property
     def obs(self):
@@ -334,7 +342,10 @@ class Pendrogone(gym.Env):
         shape_r = Pendrogone.reward_shaping( -potential,
                                                   np.linalg.norm(self.state[4:6]) )
 
-        reward = np.array([control_r, alive_r, pot_r, shape_r])
+        pendulum_r = self.pendulum_penalty()
+        
+        # reward = np.array([control_r, alive_r, pot_r, shape_r])
+        reward = control_r + alive_r + pot_r + shape_r + pendulum_r
         done = alive_r < 0
 
         return self.obs, reward, done, {}
