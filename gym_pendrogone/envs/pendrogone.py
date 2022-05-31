@@ -1,3 +1,4 @@
+from turtle import shape
 import numpy as np
 import gym
 from utils import dynamics_eq
@@ -78,6 +79,10 @@ class Pendrogone(gym.Env):
             1.0, # Sphi
             1.0, # Cphi
 
+            # np.finfo(np.float32).max, # th
+            # np.finfo(np.float32).max, # phi
+
+
             np.finfo(np.float32).max, # xl_dot
             np.finfo(np.float32).max, # zl_dot
             np.finfo(np.float32).max, # th_dot
@@ -104,27 +109,6 @@ class Pendrogone(gym.Env):
 
 
     def _apply_action(self, control):
-        # xl, zl, phi, th, xl_dot, zl_dot, phi_dot, th_dot = self.state
-
-        # clipped_u = np.clip(u, self.action_space.low, self.action_space.high)
-        
-        # u1, u2 = clipped_u
-        # F = u1 + u2
-        # M = (u1 - u2) * self.arm_length
-
-        # sdot = np.array([
-        #     xl_dot,
-        #     zl_dot,
-        #     phi_dot,
-        #     th_dot,
-        #     (-F*np.cos(phi - th) - self.q_mass*self.cable_length*th_dot*2) * np.sin(th) / self.Mass,
-        #     (-F*np.cos(phi - th) - self.q_mass*self.cable_length*th_dot*2) * (-np.cos(th)) / self.Mass - self.gravity,
-        #     M / self.Ixx,
-        #     F*np.sin(phi - th) / (self.q_mass * self.cable_length)
-        # ])
-
-        # self.state = sdot * self.dt + self.state
-
         x, y, θ, ϕ, dx, dy, dθ, dϕ = self.state
         clipped_T = np.clip(control, self.action_space.low, self.action_space.high)
         
@@ -160,7 +144,7 @@ class Pendrogone(gym.Env):
         calculating the load position
         """
         l_pos = self.limits - self.L
-        pos_load = self.random_uniform(low=-l_pos, high=l_pos)
+        pos_drone = self.random_uniform(low=-l_pos, high=l_pos)
 
         
         l_angles = np.array([ 0.1, 0.4 ])
@@ -168,12 +152,13 @@ class Pendrogone(gym.Env):
         # angle = [ 0.0, 0.0 ]
 
         self.state = np.array([
-            pos_load[0],
-            pos_load[1],
+            pos_drone[0],
+            pos_drone[1],
             angles[0],
             angles[1],
             0, 0, 0, 0
         ])
+        # self.objective = np.array([0.0, 0.0, 0.0, np.pi, 0.0,0.0,0.0,0.0])
         self.objective = np.array([0.0, 0.0])
 
         self.specific_reset()
@@ -238,15 +223,15 @@ class Pendrogone(gym.Env):
 
     @property
     def obs(self):
-        xl, zl, phi, th, xl_dot, zl_dot, phi_dot, th_dot = self.state
+        x, y, phi, th, x_dot, y_dot, phi_dot, th_dot = self.state
 
-        obj_x, obj_z = self.objective
+        obj_x, obj_y = self.objective
         
         obs = np.array([
-            xl - obj_x, zl - obj_z,
+            x - obj_x, y - obj_y,
             np.sin(phi), np.cos(phi),
             np.sin(th), np.cos(th),
-            xl_dot, zl_dot,
+            x_dot, y_dot,
             phi_dot, th_dot,
         ])
 
@@ -339,10 +324,12 @@ class Pendrogone(gym.Env):
     def step(self, action):
         # This first block of code should not change
         old_potential = self.potential
+
         
         self._apply_action(action)
         
         potential = self.potential
+
         
         control_r = -0.07 * np.array(action).dot(np.array(action))
         alive_r = float(self.alive_bonus())
@@ -355,10 +342,24 @@ class Pendrogone(gym.Env):
         ori_r = self.orientation_bonus()
         pendulum_r = self.pendulum_bonus()
         
-        reward = control_r + alive_r + pot_r + shape_r + ori_r + pendulum_r
+        reward = -np.linalg.norm(self.state[:2])/15 - np.linalg.norm(self.state[2:4] - np.array([0,np.pi])) - np.linalg.norm(self.state[4:6])/15 - np.linalg.norm(self.state[6:])
+
+        # reward = np.tanh(1 - 0.0005*(abs(self.state - np.array([0,0,0,np.pi,0,0,0,0]))).sum())
+
+        # r = np.array([control_r, alive_r, ori_r, pendulum_r, pot_r, shape_r]).round(2)
+        # print(r)
+        # reward = alive_r - np.linalg.norm(self.state[:2]) - np.linalg.norm(self.state[2:] - np.array([0,np.pi,0,0,0,0]))
+        
         done = alive_r < 0
 
         return self.obs, reward, done, {}
+    
+    # def get_reward(self):
+    #     """Uses current pose of sim to return reward."""
+    #     #reward = 1-(0.3*(abs(self.sim.pose[:3] - self.target_pos))).sum()
+    #     #reward = np.tanh(reward)
+    #     reward = 
+    #     return reward
 
     # @staticmethod
     # def reward_shaping(dist, vel):
@@ -376,14 +377,14 @@ class Pendrogone(gym.Env):
     @staticmethod
     def reward_shaping(dist, vel):
         # print(dist, vel)
-        # c = 5
-        # dist_r = np.exp(- 2 * dist)
-        # return c * dist_r
+        c = 5
+        dist_r = np.exp(- 2 * dist)
+        return c * dist_r
 
-        c1 = 10
-        c2 = 0.2
-        dist_r = -c1 * np.tanh(c2 * dist)
-        return dist_r
+        # c1 = 10
+        # c2 = 0.2
+        # dist_r = -c1 * np.tanh(c2 * dist)
+        # return dist_r
     
 
     @staticmethod

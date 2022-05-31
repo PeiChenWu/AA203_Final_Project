@@ -55,10 +55,10 @@ class Policy(nn.Module):
         value, actor_features, rnn_hxs = self.base(inputs, rnn_hxs, masks)
         dist = self.dist(actor_features)
 
-        if deterministic:
-            action = dist.mode()
-        else:
-            action = dist.sample()
+        # if deterministic:
+        #     action = dist.mode()
+        # else:
+        action = dist.sample()
 
         action_log_probs = dist.log_probs(action)
         dist_entropy = dist.entropy().mean()
