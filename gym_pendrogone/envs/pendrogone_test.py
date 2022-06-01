@@ -47,16 +47,16 @@ class Pendrogone_test(gym.Env):
         """
 
         high = np.array([
-            np.finfo(np.float32).max, # xl
-            np.finfo(np.float32).max, # zl
+            15, # xl
+            15, # zl
 
             1.0, # Sth
             1.0, # Cth
             1.0, # Sphi
             1.0, # Cphi
 
-            np.finfo(np.float32).max, # xl_dot
-            np.finfo(np.float32).max, # zl_dot
+            5, # xl_dot
+            5, # zl_dot
             np.finfo(np.float32).max, # th_dot
             np.finfo(np.float32).max, # phi_dot
         ])
@@ -119,14 +119,14 @@ class Pendrogone_test(gym.Env):
 
         
         l_angles = np.array([ 0.1, 0.4 ])
-        angles = self.random_uniform(low=-l_angles, high=l_angles)
+        angles =  self.random_uniform(low=-l_angles, high=l_angles)
         # angle = [ 0.0, 0.0 ]
 
         self.state = np.array([
             pos_load[0],
             pos_load[1],
             angles[0],
-            angles[1],
+            np.pi + angles[1],
             0, 0, 0, 0
         ])
         self.objective = np.array([0.0, 0.0])
@@ -168,11 +168,11 @@ class Pendrogone_test(gym.Env):
 
     def alive_bonus(self):
         dead = np.absolute(self.state[2]) > self.q_maxAngle \
-            or np.absolute(self.state[3]) > self.l_maxAngle \
+            or np.absolute(self.state[3]- np.pi) > self.l_maxAngle \
             or np.absolute(self.state[0]) > Pendrogone_test.LIMITS[0] \
             or np.absolute(self.state[1]) > Pendrogone_test.LIMITS[1]
 
-        return -200 if dead else +0.5
+        return -200 if dead else +1
 
     @property
     def obs(self):

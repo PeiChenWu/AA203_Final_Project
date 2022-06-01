@@ -25,7 +25,8 @@ class Pendrogone_zero(Pendrogone_test):
 
 
         # reward = np.array([control_r, alive_r, pot_r, shape_r])
-        reward = control_r + alive_r + pot_r + shape_r 
+        pendulum_r = self.pendulum_bonus()
+        reward = control_r + alive_r + pot_r + shape_r + pendulum_r
         done = alive_r < 0
 
         return self.obs, reward, done, {}
@@ -50,6 +51,13 @@ class Pendrogone_zero(Pendrogone_test):
         dist_r = np.exp(- 2 * dist)
 
         return c * dist_r
+    def pendulum_bonus(self):
+        """
+        Reward for upright pendulum (ϕ=pi) and penalize for dϕ != 0
+        """
+        _, _, _, ϕ, _, _, _, dϕ = self.state
+        # pend = np.array([np.cos(ϕ), dϕ])
+        return 2*(-np.cos(ϕ) - dϕ)
     
 
     @staticmethod

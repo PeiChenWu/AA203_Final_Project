@@ -47,13 +47,13 @@ class Pendrogone(gym.Env):
 
         # limits
         self.limits = Pendrogone.LIMITS
-        self.q_maxAngle = np.pi / 2
+        # self.q_maxAngle = np.pi / 2
 
         # ## Load stuff
         # self.l_mass = self.q_mass*4
         # self.cable_length = 0.82
         # self.cable_width = 0.01
-        self.l_maxAngle = np.pi / 3
+        # self.l_maxAngle = np.pi / 3
 
         self.Mass = self.mQ + self.mp
 
@@ -148,7 +148,7 @@ class Pendrogone(gym.Env):
 
         
         l_angles = np.array([ 0.1, 0.4 ])
-        angles = self.random_uniform(low=-l_angles, high=l_angles)
+        angles = np.pi + self.random_uniform(low=-l_angles, high=l_angles)
         # angle = [ 0.0, 0.0 ]
 
         self.state = np.array([
@@ -180,7 +180,7 @@ class Pendrogone(gym.Env):
         """
         Quadrotor position in the inertial frame
         """
-        return self.state[0:2] - self.L * self.p
+        return self.state[0:2] + self.L * self.p
 
     @property
     def p(self):
@@ -242,8 +242,8 @@ class Pendrogone(gym.Env):
         screen_width = 800
         screen_height = 800
 
-        xl,zl,phi,theta = self.state[0:4]
-        xq,zq = self.pos_quad
+        xq,zq,phi,theta = self.state[0:4]
+        xl,zl = self.pos_quad
 
         t1_xy = Pendrogone.transform(self.pos_quad,
                                      self.state[2],
