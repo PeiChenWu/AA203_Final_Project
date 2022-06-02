@@ -83,7 +83,7 @@ class Dynamics:
 
 class PlanarQuadrotorDynamicsWithInvertedPendulum(Dynamics):
 
-    def __init__(self, g=9.807, mQ=2.5, l=1.0, IQ=1.0, as_numpy=False):
+    def __init__(self, g=9.807, mQ=2.5, l=1.0, IQ=1.0, as_numpy=False, as_jnp = False):
         # Dynamics constants
         # yapf: disable
         self.g = g           # gravity (m / s**2)
@@ -91,10 +91,11 @@ class PlanarQuadrotorDynamicsWithInvertedPendulum(Dynamics):
         self.l = l           # half-length (m)
         self.IQ = IQ         # moment of inertia about the out-of-plane axis (kg * m**2)
         self.as_numpy = as_numpy
+        self.as_jnp = as_jnp
         # yapf: enable
         
         # Pendulum
-        self.mp = self.mQ*4
+        self.mp = self.mQ*4 # this was 4 before
         self.L = self.l*2
         self.Ip = self.mp*(self.L/2)**2
         
@@ -122,6 +123,8 @@ class PlanarQuadrotorDynamicsWithInvertedPendulum(Dynamics):
     
         if self.as_numpy:
             return np.array(ds)
+        if self.as_jnp:
+            return np.jnp(np.array(ds))
         return ds
     
     def dfds(self, state, time, control):
